@@ -2,9 +2,7 @@
 
 An interactive, serverless Web-GIS application designed to map and analyze earthquake and landslide hazard zones using **Leaflet.js**, **Bootstrap 5**, and browser **LocalStorage**.
 
-🔗 **Live Demo:** [View Live on GitHub Pages](https://halilsertkaya.github.io/GeoRisk-Navigator-JS/)  
-*(Replace `YOUR_USERNAME` with your actual GitHub username after publishing)*
-
+🔗 **Live Demo:** <a href="https://halilsertkaya.github.io/GeoRisk-Navigator-JS/" target="_blank">View Live on GitHub Pages</a>
 ---
 
 ## ✨ Features
