@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoRisk-Navigator - JS Version</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body, html { height: 100%; margin: 0; padding: 0; }
+        #map { width: 100%; height: calc(100vh - 56px); }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark px-3">
+        <a class="navbar-brand" href="#"><i class="fa-solid fa-earth-americas text-warning"></i> GeoRisk-Navigator (JS Edition)</a>
+        <div>
+            <button class="btn btn-outline-danger btn-sm me-2" onclick="clearData()"><i class="fa-solid fa-trash"></i> Reset Data</button>
+            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+                <i class="fa-solid fa-plus"></i> Add Risk Point
+            </button>
+        </div>
+    </nav>
+
+    <!-- Map Area -->
+    <div id="map"></div>
+
+    <!-- Add Data Modal -->
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="riskForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fa-solid fa-map-pin"></i> Add Hazard Point to Map</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Title / Location Name</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hazard Type (Category)</label>
+                            <select class="form-select" name="category">
+                                <option value="earthquake">Earthquake Fault / Hazard Zone</option>
+                                <option value="landslide">Landslide / Slope Failure</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Risk Level</label>
+                            <select class="form-select" name="risk_level">
+                                <option value="Low">Low Risk</option>
+                                <option value="Medium">Medium Risk</option>
+                                <option value="High">High Risk</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <input type="hidden" id="lat" name="lat">
+                        <input type="hidden" id="lng" name="lng">
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="fa-solid fa-info-circle"></i> Click anywhere on the map to select coordinates automatically.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success"><i class="fa-solid fa-save"></i> Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize Map
+        var map = L.map('map').setView([39.1667, 35.6667], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        var tempMarker = null;
+        var markersLayer = L.layerGroup().addTo(map);
+
+        // Default initial sample data if storage is empty
+        const defaultData = [
+            { title: "North Anatolian Fault Segment", category: "earthquake", risk_level: "High", description: "Active fault line zone with high seismic activity.", lat: 40.75, lng: 30.40 },
+            { title: "Black Sea Slope Vulnerability", category: "landslide", risk_level: "Medium", description: "Prone to seasonal heavy rainfall-triggered landslides.", lat: 41.00, lng: 39.75 }
+        ];
+
+        function getStoredData() {
+            let data = localStorage.getItem('georisk_points');
+            if (!data) {
+                localStorage.setItem('georisk_points', JSON.stringify(defaultData));
+                return defaultData;
+            }
+            return JSON.parse(data);
+        }
+
+        // Render markers on the map
+        function renderMap() {
+            markersLayer.clearLayers();
+            let points = getStoredData();
+
+            points.forEach(point => {
+                let color = '#28a745'; // Low - Green
+                if (point.risk_level === 'Medium') color = '#ffc107'; // Yellow
+                if (point.risk_level === 'High') color = '#dc3545'; // Red
+
+                let marker = L.circleMarker([point.lat, point.lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+
+                marker.bindPopup(`
+                    <div>
+                        <h6><i class="fa-solid fa-triangle-exclamation"></i> ${point.title}</h6>
+                        <hr class="my-1">
+                        <p class="mb-1"><strong>Category:</strong> ${point.category.toUpperCase()}</p>
+                        <p class="mb-1"><strong>Risk Level:</strong> <span class="badge bg-secondary">${point.risk_level}</span></p>
+                        <p class="mb-0"><strong>Description:</strong> ${point.description}</p>
+                    </div>
+                `);
+
+                markersLayer.addLayer(marker);
+            });
+        }
+
+        renderMap();
+
+        // Capture map click
+        map.on('click', function(e) {
+            document.getElementById('lat').value = e.latlng.lat;
+            document.getElementById('lng').value = e.latlng.lng;
+
+            if (tempMarker) {
+                map.removeLayer(tempMarker);
+            }
+            tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map)
+                .bindPopup("Selected Location").openPopup();
+        });
+
+        // Form submission listener
+        document.getElementById('riskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            let lat = document.getElementById('lat').value;
+            let lng = document.getElementById('lng').value;
+
+            if (!lat || !lng) {
+                lat = 39.9250;
+                lng = 32.8663;
+            }
+
+            let newPoint = {
+                title: this.title.value,
+                category: this.category.value,
+                risk_level: this.risk_level.value,
+                description: this.description.value,
+                lat: parseFloat(lat),
+                lng: parseFloat(lng)
+            };
+
+            let points = getStoredData();
+            points.push(newPoint);
+            localStorage.setItem('georisk_points', JSON.stringify(points));
+
+            // Close modal and reset form
+            let modalEl = document.getElementById('addModal');
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+            this.reset();
+
+            if (tempMarker) {
+                map.removeLayer(tempMarker);
+            }
+
+            renderMap();
+            alert("Risk point added successfully!");
+        });
+
+        // Clear local storage function
+        function clearData() {
+            if(confirm("Are you sure you want to reset all data to defaults?")) {
+                localStorage.removeItem('georisk_points');
+                renderMap();
+                alert("Data reset successfully.");
+            }
+        }
+    </script>
+</body>
+</html>
